@@ -6,7 +6,24 @@ void Camera::init() {
     CAMERA_SERIAL.begin(115200);
 }
 
-void Camera::read() {
+float Camera::distance(uint8_t cx, uint8_t cy) {
+    int8_t y = 120 - cy;
+    int8_t x = 120 - cx;
+    return sqrtf((float)(x*x + y*y));
+}
+
+float Camera::angle(uint8_t cx, uint8_t cy) {
+    int8_t y = 120 - cy;
+    int8_t x = 120 - cx;
+    float angle = 450.0f - RAD_TO_DEG_F * atan2f((float)y, (float)x);
+    if (angle >= 360.0f) {
+        return angle - 360.0f;
+    }
+    return angle;
+}
+
+void Camera::update() {
+    cameraData.ball = false;
     bool yellowGoal = false;
     bool blueGoal = false;
     if (CAMERA_SERIAL.available() >= CAMERA_PACKET_NUMBER) { // Full packet
@@ -23,33 +40,24 @@ void Camera::read() {
             // Serial.println(1000.0f / (float)(millis() - camTime));
             // camTime = millis();
         }
+        cameraData.ballDist = cameraData.ball ? distance(camData[0], camData[1]) : -2.0f; // Add pixel conversion
+        cameraData.ballAngle = cameraData.ball ? angle(camData[0], camData[1]) : -2.0f; // Add pixel conversion???
+        float yellowGoalDist = yellowGoal ? distance(camData[2], camData[3]) : -2.0f; // Add pixel conversion
+        float yellowGoalAngle = yellowGoal ? angle(camData[2], camData[3]) : -2.0f; // Add pixel conversion???
+        float blueGoalDist = blueGoal ? distance(camData[4], camData[5]) : -2.0f; // Add pixel conversion
+        float blueGoalAngle = blueGoal ? angle(camData[4], camData[5]) : -2.0f; // Add pixel conversion???
+        cameraData.attackGoal = BLUE_GOAL_ATTACK ? blueGoal : yellowGoal;
+        cameraData.defendGoal = BLUE_GOAL_ATTACK ? yellowGoal : blueGoal;
+        cameraData.attackGoalDist = BLUE_GOAL_ATTACK ? blueGoalDist : yellowGoalDist;
+        cameraData.defendGoalDist = BLUE_GOAL_ATTACK ? yellowGoalDist : blueGoalDist;
+        cameraData.attackGoalAngle = BLUE_GOAL_ATTACK ? blueGoalAngle : yellowGoalAngle;
+        cameraData.defendGoalAngle = BLUE_GOAL_ATTACK ? yellowGoalAngle : blueGoalAngle;
+    } else {
+        cameraData.attackGoal = false;
+        cameraData.defendGoal = false;
+        cameraData.attackGoalDist = -1.0f;
+        cameraData.defendGoalDist = -1.0f;
+        cameraData.attackGoalAngle = -1.0f;
+        cameraData.defendGoalAngle = -1.0f;
     }
-    cameraData.ballDist = distance(camData[0], camData[1]);
-    cameraData.ballAngle = angle(camData[0], camData[1]);
-    float yellowGoalDist = distance(camData[2], camData[3]);
-    float yellowGoalAngle = angle(camData[2], camData[3]);
-    float blueGoalDist = distance(camData[4], camData[5]);
-    float blueGoalAngle = angle(camData[4], camData[5]);
-    cameraData.attackGoal = BLUE_GOAL_ATTACK ? blueGoal : yellowGoal;
-    cameraData.defendGoal = BLUE_GOAL_ATTACK ? yellowGoal : blueGoal;
-    cameraData.attackGoalDist = BLUE_GOAL_ATTACK ? blueGoalDist : yellowGoalDist;
-    cameraData.defendGoalDist = BLUE_GOAL_ATTACK ? yellowGoalDist : blueGoalDist;
-    cameraData.attackGoalAngle = BLUE_GOAL_ATTACK ? blueGoalAngle : yellowGoalAngle;
-    cameraData.defendGoalAngle = BLUE_GOAL_ATTACK ? yellowGoalAngle : blueGoalAngle;
-}
-
-float Camera::distance(uint8_t cx, uint8_t cy) {
-    int8_t y = 120 - cy;
-    int8_t x = 120 - cx;
-    return sqrtf((float)(x*x + y*y));
-}
-
-float Camera::angle(uint8_t cx, uint8_t cy) {
-    int8_t y = 120 - cy;
-    int8_t x = 120 - cx;
-    float angle = 450.0f - RAD_TO_DEG_F * atan2f((float)y, (float)x);
-    if (angle >= 360.0f) {
-        return angle - 360.0f;
-    }
-    return angle;
 }

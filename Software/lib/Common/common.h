@@ -5,45 +5,41 @@
 #include <math.h>
 #include <Wire.h>
 
-// Robot
-#define ROBOT_1 false
+/* IMPORTANT */
+#define ROBOT_1 true
 #define ROBOT_2 false
 
-// Attack Direction
 #define BLUE_GOAL_ATTACK false
 // True: Attacking Blue Goal (Defending Yellow Goal)
 // False: Attacking Yellow Goal (Defending Blue Goal)
 
-// Attack
+/* Attack */
 #define ATTACK_SLOW_SPEED 0.0f
 #define ATTACK_FAST_SPEED 0.0f
 #define ATTACK_CLOSE_DISTANCE 0.0f
 #define ATTACK_FAR_DISTANCE 0.0f
 #define ATTACK_SURGE_ANGLE 0.0f
-#define ATTACK_MIN_OFFSET 0.0f
-#define ATTACK_MAX_OFFSET 0.0f
-#define ATTACK_MIN_SPEED_SCALE_FACTOR 0.0f
-#define ATTACK_MAX_SPEED_SCALE_FACTOR 0.0f
-// #define ATTACK_MIN_SURGE_SPEED 0.0f
-// #define ATTACK_MAX_SURGE_SPEED 0.0f
 #define ATTACK_SURGE_SPEED 0.0f
-#define ATTACK_MIN_ANGLE_SCALE_FACTOR 0.0f
-#define ATTACK_MAX_ANGLE_SCALE_FACTOR 0.0f
+#define ORBIT_MAX_OFFSET 90.0f
+#define ORBIT_MIN_MULTIPLIER 0.1f
+#define ORBIT_MAX_MULTIPLIER 1.0f
 
-// Defend
+/* Defend */
 #define DEFEND_SURGE_SPEED 0.0f
 #define DEFEND_GOAL_DISTANCE 0.0f
 #define DEFEND_SURGE_DISTANCE 0.0f
 #define DEFEND_BALL_DISTANCE 0.0f
+#define DEFEND_SURGE_ANGLE 0.0f // 30.0f in 2025
 #define DEFEND_ORBIT_ANGLE 0.0f
 
-// Out Avoidance
+/* Out Avoidance */
 #define AVOID_SPEED 0.0f
-#define AVOID_ANGLE_FLIP 0.0f
+#define AVOID_ANGLE_STOP 0.0f // 60.0f in 2025
+#define AVOID_ANGLE_FLIP 0.0f // 90.0f, 120.0f, 135.0f
 
-// PIDs
-// Overshooting big differences: lower absolute max
-#define INTEGRAL 0.0f
+/* PIDs */
+// Lower absoluteMax if overshooting big differences
+#define I 0.0f
 // Compass Correct PID
 #define COMPASS_P (ROBOT_1 ? 0.0f : 0.0f)
 #define COMPASS_D (ROBOT_1 ? 0.0f : 0.0f)
@@ -56,8 +52,8 @@
 #define DEFEND_GOAL_TRACK_MAX (ROBOT_1 ? 0.0f : 0.0f)
 
 // Horizontal PID
-#define HORIZONTAL_P (ROBOT_1 ? 0.0f : ROBOT_2 ? 0.0f : 0.0f)
-#define HORIZONTAL_D (ROBOT_1 ? 0.0f : ROBOT_2 ? 0.0f : 0.0f) // No D
+#define HORIZONTAL_P (ROBOT_1 ? 0.0f : 0.0f)
+#define HORIZONTAL_D (ROBOT_1 ? 0.0f : 0.0f) // No D
 #define HORIZONTAL_MAX (ROBOT_1 ? 0.0f : 0.0f)
 
 // Vertical PID
@@ -65,31 +61,33 @@
 #define VERTICAL_D (ROBOT_1 ? 0.0f : 0.0f) // No D
 #define VERTICAL_MAX (ROBOT_1 ? 0.0f : 0.0f)
 
-// Motor pins on Teensy
-#define FL_PWM 0
-#define FL_INA 0
-#define FL_INB 0
+/* Pins */
+// Motors
+#define FL_PWM 29
+#define FL_INA 32
+#define FL_INB 31
 
-#define FR_PWM 0
-#define FR_INA 0
-#define FR_INB 0
+#define FR_PWM 12
+#define FR_INA 28
+#define FR_INB 27
 
-#define BR_PWM 0
-#define BR_INA 0
-#define BR_INB 0
+#define BR_PWM 6
+#define BR_INA 8
+#define BR_INB 7
 
-#define BL_PWM 0
-#define BL_INA 0
-#define BL_INB 0
+#define BL_PWM 9
+#define BL_INA 11
+#define BL_INB 10
 
 // Light Sensors
 #define LS_NUMBER 32
-#define LS_0 0
-#define LS_1 0
-#define LS_2 0
-#define LS_3 0
-#define LS_OUT 0
-#define LS_OUT_2 0
+#define LS_0 37
+#define LS_1 36
+#define LS_2 35
+#define LS_3 34
+#define LS_OUT 40
+#define LS_OUT_2 39
+#define LS_OUT_3 38
 
 // Camera
 #define CAMERA_SERIAL Serial1
@@ -99,7 +97,7 @@
 #define CAMERA_RX 0
 
 // Bluetooth
-#define BLUETOOTH_SERIAL Serial6
+#define BLUETOOTH_SERIAL Serial5
 #define BLUETOOTH_PACKET_NUMBER 6
 #define BLUETOOTH_START_BYTE 255
 #define BLUETOOTH_TX 0
@@ -115,17 +113,20 @@
 float normaliseHalfAngle(float angle);
 float normaliseAngle(float angle);
 float angleDiff(float angle_1, float angle_2);
-float midAngleBetween(uint8_t index_1, uint8_t index_2);
-float smallMidAngleBetween(float angle_1, float angle_2);
-float ballCamToDist(float pixelDistance);
-float goalCamToDist(float pixelDistance);
+float midAngle(uint8_t index_1, uint8_t index_2);
+float smallMidAngle(float angle_1, float angle_2);
+float ballCamToDist(float ballPixelDistance);
+float goalCamToDist(float goalPixelDistance);
 
-// Trigonometry
+/* Trigonometry */
 #define RAD_TO_DEG_F 57.29578f
 #define DEG_TO_RAD_F 0.017453293f
 
+/* Structs */
 struct LSData {
     bool stopOnLine;
+    float lineAngle;
+    float avoidSpeed;
     float avoidAngle;
 };
 
@@ -147,7 +148,7 @@ struct OrbitData {
 };
 
 // struct BluetoothData {
-//     a
+//     float abc;
 // };
 
 #endif

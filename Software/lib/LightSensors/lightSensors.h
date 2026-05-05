@@ -11,7 +11,7 @@ class LightSensors {
         void read();
         float lineAngle();
         float direction(float heading);
-        bool stopOnLine(float ballAngle);
+        bool stopOnLine(bool ball, float ballAngle);
         void update(const CameraData& cameraData, float heading);
 
     private:

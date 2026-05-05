@@ -9,13 +9,7 @@ void LightSensors::init() {
     }    
     read();
     for (uint8_t i = 0; i < LS_NUMBER; i++) {
-        if (ROBOT_1) {
-            whiteValues[i] = (i == 17) ? 900 : 825;
-        } else if (ROBOT_2) {
-            whiteValues[i] = lightValues[i] + 325;
-        } else {
-            whiteValues[i] = lightValues[i] + 200;
-        }
+        whiteValues[i] = ROBOT_1 ? 900 : 900;
     }
 }
 
@@ -48,66 +42,65 @@ float LightSensors::lineAngle() {
         // Serial.print(" ");        
     }
     // Serial.println();
-    for (uint8_t i = 0; i < LS_NUMBER; i++) { // Fills in faulty phototransistors
-        uint8_t before = (i + 31) % 32;
-        uint8_t after = (i + 1) % 32;
-        if (seesLine[before] && !seesLine[i] && seesLine[after]) { // 0 surrounded by 1
-            seesLine[i] = 1;
-        }
+    // for (uint8_t i = 0; i < LS_NUMBER; i++) { // Fills in faulty phototransistors
+    //     uint8_t before = (i + (LS_NUMBER - 1)) % LS_NUMBER;
+    //     uint8_t after = (i + 1) % LS_NUMBER;
+        // if (seesLine[before] && !seesLine[i] && seesLine[after]) { // 0 surrounded by 1
+        //     seesLine[i] = 1;
+        // }
         // else if (!seesLine[before] && seesLine[i] && !seesLine[after]) { // 1 surrounded by 0 (shouldn't happen because of thresholds)
         //     seesLine[i] = 0;
         // }
-    }
+    // }
     clusterStart = false;
     uint8_t cluster = 0;
     for (uint8_t i = 0; i < LS_NUMBER; i++) {
         if (seesLine[i]) {
             if (!clusterStart) { // Starts cluster
                 clusters[cluster][0] = i;
-                cluster += (i == 31) ? 1 : 0; // cluster++ if i == 31 is the start of a cluster
                 clusterStart = true;
-            } else if (i == 31) { // Ends cluster
+            } if (i == LS_NUMBER - 1) { // Ends cluster
                 clusters[cluster][1] = i;
                 cluster++;
                 clusterStart = false;
             }
-        } else {
-            if (clusterStart) { // Ends cluster
-                clusters[cluster][1] = i - 1;
-                cluster++;
-                clusterStart = false;
-            }
+        } else if (clusterStart) { // Ends cluster
+            clusters[cluster][1] = i - 1;
+            cluster++;
+            clusterStart = false;
         }
     }
-    if (seesLine[31] && seesLine[0]) { // Merge first and last clusters
+    if (seesLine[LS_NUMBER - 1] && seesLine[0]) { // Merge first and last clusters
         clusters[0][0] = clusters[cluster - 1][0];
         cluster--;
     }
     // Line Angle Calculations
     if (cluster == 0) { // No line
         whiteAngle = -1.0f;
-    } else if (cluster == 1) { // 1 cluster
-        whiteAngle = midAngleBetween(clusters[0][0], clusters[0][1]); // Midpoint of cluster
-    } else if (cluster == 2) { // 2 clusters
-        clusterAngles[0] = midAngleBetween(clusters[0][0], clusters[0][1]); // Midpoint of cluster 0
-        clusterAngles[1] = midAngleBetween(clusters[1][0], clusters[1][1]); // Midpoint of cluster 1
-        whiteAngle = smallMidAngleBetween(clusterAngles[0], clusterAngles[1]); // Midpoint of minor arc between clusters 0 and 1
-    } else if (cluster == 3) { // 3 clusters
-        for (uint8_t i = 0; i < 3; i++) {
-            clusterAngles[i] = midAngleBetween(clusters[i][0], clusters[i][1]); // Midpoint of clusters
+    } else {
+        for (uint8_t i = 0; i < cluster; i++) {
+            clusterAngles[i] = midAngle(clusters[i][0], clusters[i][1]);
         }
-        for (uint8_t i = 0; i < 3; i++) {
-            angleBetweenClusters[i] = (uint8_t)(round(angleDiff(clusterAngles[i], clusterAngles[(i + 1) % 3]))); // Smallest angle between clusters
-        }
-        uint8_t largestAngle = (uint8_t)max(max(angleBetweenClusters[0], angleBetweenClusters[1]), angleBetweenClusters[2]); // Largest angle between clusters
-        for (uint8_t i = 0; i < 3; i++) {
-            if (angleBetweenClusters[i] == largestAngle) { // whiteAngle midpoint of clusters furthest from each other, on the side of the remaining cluster
-                whiteAngle = smallMidAngleBetween(clusterAngles[i], clusterAngles[(i + 1) % 3]); // Midpoint of minor arc between clusters
-                if (angleDiff(whiteAngle, clusterAngles[(i + 2) % 3]) > 90.0f) { // Wrong side lol
-                    whiteAngle = normaliseAngle(whiteAngle + 180.0f); // Flips whiteAngle
-                }
-                break;
+        if (cluster == 1) { // 1 cluster
+            whiteAngle = clusterAngles[0];
+        } else if (cluster == 2) { // 2 clusters
+            whiteAngle = smallMidAngle(clusterAngles[0], clusterAngles[1]);
+        } else if (cluster == 3) { // 3 clusters
+            for (uint8_t i = 0; i < cluster; i++) {
+                angleBetweenClusters[i] = (uint8_t)(roundf(angleDiff(clusterAngles[i], clusterAngles[(i + 1) % cluster]))); // Smallest angle between clusters
             }
+            uint8_t largestAngle = (uint8_t)max(max(angleBetweenClusters[0], angleBetweenClusters[1]), angleBetweenClusters[2]); // Largest angle between clusters
+            for (uint8_t i = 0; i < cluster; i++) {
+                if (angleBetweenClusters[i] == largestAngle) { // whiteAngle midpoint of clusters furthest from each other, on the side of the remaining cluster
+                    whiteAngle = smallMidAngle(clusterAngles[i], clusterAngles[(i + 1) % cluster]); // Midpoint of minor arc between clusters
+                    if (angleDiff(whiteAngle, clusterAngles[(i + (cluster - 1)) % cluster]) > 90.0f) { // Wrong side lol
+                        whiteAngle = normaliseAngle(whiteAngle + 180.0f); // Flips whiteAngle
+                    }
+                    break;
+                }
+            }
+        } else { // More than 3 clusters
+            // aaa
         }
     }
     // for (uint8_t i = 0; i < cluster; i++) {
@@ -121,8 +114,6 @@ float LightSensors::lineAngle() {
 }
 
 float LightSensors::direction(float heading) {
-    read();
-    lineAngle();
     float correctedAngle = normaliseAngle(whiteAngle + heading);
     // Serial.printf("Line: %d\tState: %d\tWhiteAngle: %.1f\tCorrectedAngle: %.1f\tLineAngle: %.1f\n", line, state, whiteAngle, correctedAngle, lineAngle);
     if (state == 1) { // State 1
@@ -137,7 +128,7 @@ float LightSensors::direction(float heading) {
         }
     } else { // On line (State 2 or 3)
         if (line) {
-            if (angleDiff(correctedLineAngle, correctedAngle) <= AVOID_ANGLE_FLIP) { // State 2 // INCREASE (90/120/135)
+            if (angleDiff(correctedLineAngle, correctedAngle) <= AVOID_ANGLE_FLIP) { // State 2
                 state = 2;
                 correctedLineAngle = correctedAngle;
             } else { // State 3
@@ -153,24 +144,23 @@ float LightSensors::direction(float heading) {
             }
         }
     }
-    avoidAngle = (state != 1) ? normaliseAngle(correctedLineAngle - heading + 180.0f) : -1.0f;
+    avoidAngle = (state != 1) ? normaliseAngle(correctedLineAngle + 180.0f) : -1.0f;
     return avoidAngle;
 }
 
-bool LightSensors::stopOnLine(float ballAngle) {
-    if (state == 2) { // Can only stop in state 2
-        if (angleDiff(ballAngle, whiteAngle) < 60.0f) {
-            return true;
-        } 
-        else {
-            return false;
-        }
+bool LightSensors::stopOnLine(bool ball, float ballAngle) {
+    if (ball && state == 2) {
+        bool stop = angleDiff(ballAngle, whiteAngle) < AVOID_ANGLE_STOP;
+        return stop;
     } else {
         return false;
     }
 }
 
 void LightSensors::update(const CameraData& cameraData, float heading) {
+    read();
+    lsData.lineAngle = lineAngle();
     lsData.avoidAngle = direction(heading);
-    lsData.stopOnLine = stopOnLine(cameraData.ballAngle);
+    lsData.stopOnLine = stopOnLine(cameraData.ball, cameraData.ballAngle);
+    // avoid speed (scalar resolute?)
 }

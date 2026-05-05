@@ -16,14 +16,14 @@ void Motor::move(int16_t speed) {
     if (speed > 0) {
         digitalWrite(INA, HIGH);
         digitalWrite(INB, LOW);
-        analogWrite(PWM, abs(speed));
+        analogWrite(PWM, constrain(abs(speed), 0, 255));
     } else if (speed < 0) {
         digitalWrite(INA, LOW);
         digitalWrite(INB, HIGH);
-        analogWrite(PWM, abs(speed));
+        analogWrite(PWM, constrain(abs(speed), 0, 255));
     } else {
         digitalWrite(INA, HIGH);
         digitalWrite(INB, HIGH);
-        analogWrite(PWM, abs(speed));
+        analogWrite(PWM, constrain(abs(speed), 0, 255));
     }
 }

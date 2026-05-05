@@ -10,8 +10,9 @@ class Orbit {
         void update(const CameraData& cameraData);
 
     private:
-        float velocity(bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
-        float direction(bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
+        float speed(bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
+        float angle(bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
+        float moveSpeed = -1.0f;
 };
 
 #endif
