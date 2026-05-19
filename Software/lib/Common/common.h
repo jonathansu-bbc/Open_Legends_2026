@@ -63,6 +63,8 @@
 
 /* Pins */
 // Motors
+#define MOTOR_NUM 4
+
 #define FL_PWM 29
 #define FL_INA 32
 #define FL_INB 31
