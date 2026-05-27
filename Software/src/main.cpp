@@ -25,114 +25,27 @@
 Motors motors;
 // Orbit orbit;
 // OrbitData orbitdata;
+IntervalTimer myTimer;
 
-// Adafruit_BNO055 bno = Adafruit_BNO055(55, BNO055_ADDRESS_B, &Wire2);
+Adafruit_BNO055 bno = Adafruit_BNO055(55, BNO055_ADDRESS_B, &Wire2);
 // PID compassPID(COMPASS_P, I, COMPASS_D, COMPASS_MAX);
 
 // unsigned long loopTime;
 
 float speed = 0;
 
-uint8_t ledon = 1;
+// uint8_t ledon = 1;
+static volatile uint8_t motorsOn = 0;
+
+void interrupt() {
+    motorsOn = (motorsOn + 1) % 50;
+}
 
 void setup() {
     Serial.begin(9600);
     pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, ledon);
-
-    // pinMode(24, INPUT);
-    delay(1000);
-
+    // digitalWrite(LED_BUILTIN, HIGH);
     motors.init();
-
-    // pinMode(FL_INA, OUTPUT);
-    // pinMode(FL_INB, OUTPUT);
-    // pinMode(FL_PWM, OUTPUT);
-
-    // pinMode(FR_INA, OUTPUT);
-    // pinMode(FR_INB, OUTPUT);
-    // pinMode(FR_PWM, OUTPUT);
-
-    // pinMode(BL_INA, OUTPUT);
-    // pinMode(BL_INB, OUTPUT);
-    // pinMode(BL_PWM, OUTPUT);
-
-    // pinMode(BR_INA, OUTPUT);
-    // pinMode(BR_INB, OUTPUT);
-    // pinMode(BR_PWM, OUTPUT);
-
-    // delay(10);
-
-    // digitalWrite(BL_INA, HIGH);
-    // digitalWrite(BL_INB, HIGH);
-
-    // digitalWrite(FL_INA, HIGH);
-    // digitalWrite(FL_INB, HIGH);
-
-    // digitalWrite(BR_INA, HIGH);
-    // digitalWrite(BR_INB, HIGH);
-
-    // digitalWrite(FR_INA, HIGH);
-    // digitalWrite(FR_INB, HIGH);
-
-    // delay(1000);
-
-    // digitalWrite(BL_INA, LOW);
-    // digitalWrite(BL_INB, LOW);
-    // analogWrite(BL_PWM, 0);
-
-    // digitalWrite(FL_INA, LOW);
-    // digitalWrite(FL_INB, LOW);
-    // analogWrite(FL_PWM, 0);
-
-    // digitalWrite(BR_INA, LOW);
-    // digitalWrite(BR_INB, LOW);
-    // analogWrite(BR_PWM, 0);
-
-    // digitalWrite(FR_INA, LOW);
-    // digitalWrite(FR_INB, LOW);
-    // analogWrite(FR_PWM, 0);
-
-    // delay(10); 
-    
-    // digitalWrite(BL_INA, HIGH);
-    // digitalWrite(BL_INB, LOW);
-    // analogWrite(BL_PWM, 0);
-
-
-    // digitalWrite(FL_INA, HIGH);
-    // digitalWrite(FL_INB, LOW);
-    // analogWrite(FL_PWM, 0);
-
-    // digitalWrite(BR_INA, HIGH);
-    // digitalWrite(BR_INB, LOW);
-    // analogWrite(BR_PWM, 0);
-
-    // digitalWrite(FR_INA, HIGH);
-    // digitalWrite(FR_INB, LOW);
-    // analogWrite(FR_PWM, 0);
-
-    // delay(10);
-
-    // digitalWrite(BL_INA, LOW);
-    // digitalWrite(BL_INB, LOW);
-    // analogWrite(BL_PWM, 0);
-
-
-    // digitalWrite(FL_INA, LOW);
-    // digitalWrite(FL_INB, LOW);
-    // analogWrite(FL_PWM, 0);
-
-    // digitalWrite(BR_INA, LOW);
-    // digitalWrite(BR_INB, LOW);
-    // analogWrite(BR_PWM, 0);
-
-    // digitalWrite(FR_INA, LOW);
-    // digitalWrite(FR_INB, LOW);
-    // analogWrite(FR_PWM, 0);
-
-    // delay(10); 
-
     // camera.init();
     // motors.init();
     // lightSensors.init(); 
@@ -150,6 +63,7 @@ void setup() {
     // delay(500);
     // digitalWrite(LED_BUILTIN, LOW);
     // loopTime = millis();
+    myTimer.begin(interrupt, 2000);
 }
 
 void loop() {
@@ -173,83 +87,23 @@ void loop() {
     // Serial.println(1000.0f / (float)(millis() - loopTime)); // loops/second
     // loopTime = millis();
     // motors.move(0.0f, 0.0f, -30.0f);
-    // digitalWrite(LED_BUILTIN, HIGH);
-    // delay(500);
-    // digitalWrite(LED_BUILTIN, LOW);
-    // delay(500);
-    // digitalWrite(BR_INA, HIGH);
-    // digitalWrite(BR_INB, LOW);
-    // analogWrite(BR_PWM, 150);
 
-    // digitalWrite(BL_INA, HIGH);
-    // digitalWrite(BL_INB, LOW);
-    // analogWrite(BL_PWM, 150);
-
-    // digitalWrite(FR_INA, HIGH);
-    // digitalWrite(FR_INB, LOW);
-    // analogWrite(FR_PWM, 150);
-
-    // digitalWrite(FL_INA, HIGH);
-    // digitalWrite(FL_INB, LOW);
-    // analogWrite(FL_PWM, 150);
-
-    // if (digitalRead(24) == 0) {
-    //     digitalWrite(BL_INA, HIGH);
-    //     digitalWrite(BL_INB, HIGH);
-    //     analogWrite(BL_PWM, 0);
-
-    //     digitalWrite(FL_INA, HIGH);
-    //     digitalWrite(FL_INB, HIGH);
-    //     analogWrite(FL_PWM, 0);
-
-    //     digitalWrite(BR_INA, HIGH);
-    //     digitalWrite(BR_INB, HIGH);
-    //     analogWrite(BR_PWM, 0);
-
-    //     digitalWrite(FR_INA, HIGH);
-    //     digitalWrite(FR_INB, HIGH);
-    //     analogWrite(FR_PWM, 0);
-    // } else {
-    //     digitalWrite(BL_INA, HIGH);
-    //     digitalWrite(BL_INB, LOW);
-    //     analogWrite(BL_PWM, 150);
-
-    //     digitalWrite(FL_INA, HIGH);
-    //     digitalWrite(FL_INB, LOW);
-    //     analogWrite(FL_PWM, 150);
-
-    //     digitalWrite(BR_INA, HIGH);
-    //     digitalWrite(BR_INB, LOW);
-    //     analogWrite(BR_PWM, 150);
-
-    //     digitalWrite(FR_INA, HIGH);
-    //     digitalWrite(FR_INB, LOW);
-    //     analogWrite(FR_PWM, 150);
-    // }
-
-    // delay(10);
-
-    if (speed >= 250.0f) {
-        speed = -250.0f;
+    if (motorsOn > 1) {
+        motors.move(0.0f, 0.0f, -20.0f);
+    } else {
+        motors.move(0.0f, 0.0f, 0.0f);
     }
 
-    speed += 10;
-
-    motors.move(0.0f, 0.0f, speed);
-
-    ledon ^= 1;
-
-    digitalWrite(LED_BUILTIN, ledon);
-
-    delay(100);
-
-    motors.move(0.0f, 0.0f, 0.0f);
-
-    ledon ^= 1;
-
-    digitalWrite(LED_BUILTIN, ledon);
-
-    delay(2);
-
-
+        // if (speed >= 250.0f) {
+    //     speed = -250.0f;
+    // }
+    // speed += 10;
+    // motors.move(0.0f, 0.0f, speed);
+    // ledon ^= 1;
+    // digitalWrite(LED_BUILTIN, ledon);
+    // delay(100);
+    // motors.move(0.0f, 0.0f, 0.0f);
+    // ledon ^= 1;
+    // digitalWrite(LED_BUILTIN, ledon);
+    // delay(2);
 }
