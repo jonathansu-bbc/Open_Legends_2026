@@ -1,7 +1,8 @@
 #ifndef LS_H
 #define LS_H
 
-#include "common.h"
+#include "config.h"
+#include "definitions.h"
 
 class LightSensors {
     public:

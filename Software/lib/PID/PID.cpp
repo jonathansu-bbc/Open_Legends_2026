@@ -1,5 +1,9 @@
 #include "PID.h"
 
+// Proportional: Multiplies error by kp. Speeds up response but can cause oscillations
+// Integral: Sums error over time and multiplies it by ki. Excessive gain makes controller unstable
+// Derivative: Multiplies rate of change of error by kd. Stops overshooting
+
 PID::PID(float p, float i, float d, float absoluteMax) {
     kp = p;
     ki = i;
@@ -16,7 +20,7 @@ float PID::update(float input, float setpoint, float modulus) {
     lastTime = currentTime;
     integral += elapsedTime * error;
     if (modulus != 0.0f) {
-        float difference = (input - lastInput);
+        float difference = (error - lastError);
         if (difference < -modulus) {
             difference += modulus;
         } else if (difference > modulus) {
@@ -24,9 +28,9 @@ float PID::update(float input, float setpoint, float modulus) {
         }
         derivative = difference / elapsedTime;
     } else {
-        derivative = (input - lastInput) / elapsedTime;
+        derivative = -(error - lastError) / elapsedTime; // ? why -
     }
-    lastInput = input;
+    lastError = error;
     float correction = kp * error + ki * integral - kd * derivative;
-    return absMax == 0 ? correction : constrain(correction, -absMax, absMax);
+    return absMax == 0.0f ? correction : constrain(correction, -absMax, absMax);
 }

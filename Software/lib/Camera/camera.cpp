@@ -23,41 +23,49 @@ float Camera::angle(uint8_t cx, uint8_t cy) {
 }
 
 void Camera::update() {
-    cameraData.ball = false;
-    bool yellowGoal = false;
-    bool blueGoal = false;
+    cameraData.newData = false;
     if (CAMERA_SERIAL.available() >= CAMERA_PACKET_NUMBER) { // Full packet
         uint8_t first = CAMERA_SERIAL.read();
         uint8_t second = CAMERA_SERIAL.peek();
         if (first == CAMERA_START_BYTE && second == CAMERA_START_BYTE) { // Start byte
+            cameraData.newData = true;
+            
+            cameraData.ball = false;
+            bool yellowGoal = false;
+            bool blueGoal = false;
+
             CAMERA_SERIAL.read();
             for (uint8_t byte = 0; byte < CAMERA_PACKET_NUMBER - 2; byte++) {
                 camData[byte] = CAMERA_SERIAL.read();
+                // Serial.print(camData[byte]);
+                // Serial.print(" ");
             }
+            // Serial.println();
             cameraData.ball = camData[0] != 120 || camData[1] != 120;
             yellowGoal = camData[2] != 120 || camData[3] != 120;
             blueGoal = camData[4] != 120 || camData[5] != 120;
-            // Serial.println(1000.0f / (float)(millis() - camTime));
-            // camTime = millis();
+            fps = 1000.0f / (float)(millis() - camTime);
+            camTime = millis();
+            cameraData.ballDist = cameraData.ball ? distance(camData[0], camData[1]) : -2.0f; // Add pixel conversion
+            cameraData.ballAngle = cameraData.ball ? angle(camData[0], camData[1]) : -2.0f; // Add pixel conversion???
+            float yellowGoalDist = yellowGoal ? distance(camData[2], camData[3]) : -2.0f; // Add pixel conversion
+            float yellowGoalAngle = yellowGoal ? angle(camData[2], camData[3]) : -2.0f; // Add pixel conversion???
+            float blueGoalDist = blueGoal ? distance(camData[4], camData[5]) : -2.0f; // Add pixel conversion
+            float blueGoalAngle = blueGoal ? angle(camData[4], camData[5]) : -2.0f; // Add pixel conversion???
+            cameraData.attackGoal = BLUE_GOAL_ATTACK ? blueGoal : yellowGoal;
+            cameraData.defendGoal = BLUE_GOAL_ATTACK ? yellowGoal : blueGoal;
+            cameraData.attackGoalDist = BLUE_GOAL_ATTACK ? blueGoalDist : yellowGoalDist;
+            cameraData.defendGoalDist = BLUE_GOAL_ATTACK ? yellowGoalDist : blueGoalDist;
+            cameraData.attackGoalAngle = BLUE_GOAL_ATTACK ? blueGoalAngle : yellowGoalAngle;
+            cameraData.defendGoalAngle = BLUE_GOAL_ATTACK ? yellowGoalAngle : blueGoalAngle;
         }
-        cameraData.ballDist = cameraData.ball ? distance(camData[0], camData[1]) : -2.0f; // Add pixel conversion
-        cameraData.ballAngle = cameraData.ball ? angle(camData[0], camData[1]) : -2.0f; // Add pixel conversion???
-        float yellowGoalDist = yellowGoal ? distance(camData[2], camData[3]) : -2.0f; // Add pixel conversion
-        float yellowGoalAngle = yellowGoal ? angle(camData[2], camData[3]) : -2.0f; // Add pixel conversion???
-        float blueGoalDist = blueGoal ? distance(camData[4], camData[5]) : -2.0f; // Add pixel conversion
-        float blueGoalAngle = blueGoal ? angle(camData[4], camData[5]) : -2.0f; // Add pixel conversion???
-        cameraData.attackGoal = BLUE_GOAL_ATTACK ? blueGoal : yellowGoal;
-        cameraData.defendGoal = BLUE_GOAL_ATTACK ? yellowGoal : blueGoal;
-        cameraData.attackGoalDist = BLUE_GOAL_ATTACK ? blueGoalDist : yellowGoalDist;
-        cameraData.defendGoalDist = BLUE_GOAL_ATTACK ? yellowGoalDist : blueGoalDist;
-        cameraData.attackGoalAngle = BLUE_GOAL_ATTACK ? blueGoalAngle : yellowGoalAngle;
-        cameraData.defendGoalAngle = BLUE_GOAL_ATTACK ? yellowGoalAngle : blueGoalAngle;
-    } else {
-        cameraData.attackGoal = false;
-        cameraData.defendGoal = false;
-        cameraData.attackGoalDist = -1.0f;
-        cameraData.defendGoalDist = -1.0f;
-        cameraData.attackGoalAngle = -1.0f;
-        cameraData.defendGoalAngle = -1.0f;
+        
+    // } else {
+        // cameraData.attackGoal = false;
+        // cameraData.defendGoal = false;
+        // cameraData.attackGoalDist = -1.0f;
+        // cameraData.defendGoalDist = -1.0f;
+        // cameraData.attackGoalAngle = -1.0f;
+        // cameraData.defendGoalAngle = -1.0f;
     }
 }

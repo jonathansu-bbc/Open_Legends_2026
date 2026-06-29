@@ -1,7 +1,7 @@
 #ifndef DEFENDER_H
 #define DEFENDER_H
 
-#include "common.h"
+#include "definitions.h"
 #include "PID.h"
 
 class Defender {

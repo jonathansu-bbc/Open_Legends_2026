@@ -1,7 +1,7 @@
 #ifndef BLUETOOTH_H
 #define BLUETOOTH_H
 
-#include "common.h"
+#include "definitions.h"
 
 class Bluetooth {
     public:

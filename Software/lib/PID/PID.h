@@ -15,7 +15,7 @@ private:
     unsigned long lastTime;
     float absMax;
     float integral;
-    float lastInput;
+    float lastError;
 };
 
 #endif

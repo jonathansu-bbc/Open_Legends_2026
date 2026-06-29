@@ -1,59 +1,63 @@
 #include <Adafruit_BNO055.h>
-#include <Adafruit_Sensor.h>
-// #include <attacker.h>
-// #include <bluetooth.h>
-// #include <camera.h>
-#include <common.h>
-// #include <defender.h>
-// #include <dribbler.h>
-// #include <kicker.h>
-// #include <lightSensors.h>
-// #include <motor.h>
+#include <bluetooth.h>
+#include <camera.h>
+// #include <definitions.h>
+#include <config.h>
+#include <dribbler.h>
+#include <kicker.h>
+#include <lightSensors.h>
+#include <motor.h>
 #include <motors.h>
-// #include <orbit.h>
-// #include <PID.h>
+#include <orbit.h>
+#include <PID.h>
 
-// Attacker attacker;
-// Bluetooth bluetooth;
-// Camera camera;
-// CameraData cameradata;
-// Defender defender;
-// Dribbler dribbler;
-// Kicker kicker;
-// LightSensors lightSensors;
-// LSData lsdata;
+Bluetooth bluetooth;
+Camera camera;
+Dribbler dribbler;
+Kicker kicker;
+LightSensors lightSensors;
+LSData lsdata;
 Motors motors;
-// Orbit orbit;
-// OrbitData orbitdata;
-IntervalTimer myTimer;
+Orbit orbit;
+OrbitData orbitdata;
+// IntervalTimer motorsOnTimer;
+IntervalTimer ledTimer;
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55, BNO055_ADDRESS_B, &Wire2);
-// PID compassPID(COMPASS_P, I, COMPASS_D, COMPASS_MAX);
+PID imuPID(IMU_KP, IMU_KI, IMU_KD, IMU_MAX);
+PID attackGoalTrackPID(ATTACK_GOAL_TRACK_KP, ATTACK_GOAL_TRACK_KI, ATTACK_GOAL_TRACK_KD, ATTACK_GOAL_TRACK_MAX);
 
-// unsigned long loopTime;
+// static volatile uint8_t motorsOn = 0;
+static volatile uint8_t ledOn = 0;
+static float attackGoalAngle = 0.0f; // in case first loop doesn't have camera values
+static float attackGoalRot = 0.0f;
 
-float speed = 0;
+// void motorsOnUpdate() {
+//     motorsOn = (motorsOn + 1) % 100;
+// }
 
-// uint8_t ledon = 1;
-static volatile uint8_t motorsOn = 0;
-
-void interrupt() {
-    motorsOn = (motorsOn + 1) % 50;
+void toggleLED() {
+    ledOn = 1 - ledOn;
+    digitalWrite(LED_BUILTIN, ledOn);
 }
 
-void setup() {
+void setup()
+{
+    delay(100);
+
     Serial.begin(9600);
+
     pinMode(LED_BUILTIN, OUTPUT);
-    // digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(LED_BUILTIN, HIGH);
+
     motors.init();
-    // camera.init();
-    // motors.init();
-    // lightSensors.init(); 
+    camera.init();
+    // lightSensors.init();
     // attacker.init();
     // defender.init();
-    // bluetooth.init(); // decide initial role in setup
-    // kicker and dribbler init where?
-    // Wire2.begin();
+    // bluetooth.init();
+    // kicker and dribbler
+
     // while (!bno.begin(OPERATION_MODE_IMUPLUS)) { 
     //     Serial.println("BNO not working");
     //     delay(1000);
@@ -61,22 +65,38 @@ void setup() {
     // delay(500);
     // bno.setExtCrystalUse(true);
     // delay(500);
-    // digitalWrite(LED_BUILTIN, LOW);
-    // loopTime = millis();
-    myTimer.begin(interrupt, 2000);
+
+    digitalWrite(LED_BUILTIN, LOW);
+
+    // motorsOnTimer.begin(motorsOnUpdate, 1000);
+    ledTimer.begin(toggleLED, 500000);
 }
 
 void loop() {
-    // sensors_event_t compass;
-    // bno.getEvent(&compass);
-    // float heading = compass.orientation.x;
-    // float compassRot = compassPID.update(normaliseHalfAngle(heading), 0.0f);
-    // camera.update();
-    // orbit.update(camera.cameraData);
-    // lightSensors.update(camera.cameraData, heading); // stopOnLine account for heading?
-    
-    // bool attack = true; // BLUETOOTH
+    // sensors_event_t imu;
+    // bno.getEvent(&imu);
+    // float heading = imu.orientation.x;
 
+    // if (heading > 180.0f) {
+    //     heading -= 360.0f;
+    // }
+
+    // float compassRot = imuPID.update(heading, 0.0f);
+
+    camera.update();
+    if (camera.cameraData.newData) {
+        attackGoalAngle = camera.cameraData.attackGoalAngle;
+        if (attackGoalAngle > 180.0f) {
+            attackGoalAngle -= 360.0f;
+        }
+        attackGoalRot = -attackGoalTrackPID.update(attackGoalAngle, 0.0f);
+    }
+    orbit.update(camera.cameraData);
+    motors.move(orbit.orbitData.orbitSpeed, orbit.orbitData.orbitAngle, attackGoalRot);
+    // motors.move(25.0f, 90.0f, 0.0f);
+    
+    // lightSensors.update(camera.cameraData, heading); // stopOnLine account for heading?
+    // bool attack = true; // BLUETOOTH
     // if (attack) { // Attacker
     //     attacker.update(lightSensors.lsData, camera.cameraData, orbit.orbitData, heading, compassRot);
     //     motors.move(attacker.movementValues[0], attacker.movementValues[1], attacker.movementValues[2]);
@@ -84,26 +104,20 @@ void loop() {
     //     defender.update(lightSensors.lsData, camera.cameraData, orbit.orbitData, heading, compassRot);
     //     motors.move(defender.movementValues[0], defender.movementValues[1], defender.movementValues[2]);
     // }
-    // Serial.println(1000.0f / (float)(millis() - loopTime)); // loops/second
-    // loopTime = millis();
-    // motors.move(0.0f, 0.0f, -30.0f);
 
-    if (motorsOn > 1) {
-        motors.move(0.0f, 0.0f, -20.0f);
-    } else {
-        motors.move(0.0f, 0.0f, 0.0f);
-    }
+    #if DEBUG_IMU
+    Serial.printf("Heading: %.2f\tCorrection: %.2f\tMode: %d", heading, compassRot, (uint8_t)bno.getMode());
+    #endif
 
-        // if (speed >= 250.0f) {
-    //     speed = -250.0f;
-    // }
-    // speed += 10;
-    // motors.move(0.0f, 0.0f, speed);
-    // ledon ^= 1;
-    // digitalWrite(LED_BUILTIN, ledon);
-    // delay(100);
-    // motors.move(0.0f, 0.0f, 0.0f);
-    // ledon ^= 1;
-    // digitalWrite(LED_BUILTIN, ledon);
-    // delay(2);
+    #if DEBUG_CAMERA
+    Serial.printf("ballAngle: %.2f\tattackGoalAngle: %.2f\tdefendGoalAngle: %.2f\tFPS: %.2f", camera.cameraData.ballAngle, camera.cameraData.attackGoalAngle, camera.cameraData.defendGoalAngle. camera.fps);
+    #endif
+
+    #if DEBUG_GOAL_CORRECT
+    Serial.printf("attackGoalAngle: %.2f\tattackGoalRot: %.2f", attackGoalAngle, attackGoalRot);
+    #endif
+
+    #if DEBUG
+    Serial.println();
+    #endif
 }

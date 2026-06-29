@@ -1,16 +1,14 @@
 #ifndef DRIBBLER_H
 #define DRIBBLER_H
 
-#include "common.h"
+#include "definitions.h"
 
 class Dribbler {
     public:
         Dribbler() {};
-        LSData lsData;
-        a
 
     private:
-        a
+    
 };
 
 #endif

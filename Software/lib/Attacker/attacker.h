@@ -1,7 +1,7 @@
 #ifndef ATTACKER_H
 #define ATTACKER_H
 
-#include "common.h"
+#include "definitions.h"
 #include "PID.h"
 
 class Attacker {

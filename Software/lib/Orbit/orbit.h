@@ -1,7 +1,7 @@
 #ifndef ORBIT_H
 #define ORBIT_H
 
-#include "common.h"
+#include "definitions.h"
 
 class Orbit {
     public:
@@ -10,7 +10,7 @@ class Orbit {
         void update(const CameraData& cameraData);
 
     private:
-        float speed(bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
+        float speed(bool ball, bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
         float angle(bool attackGoal, float attackGoalAngle, float ballAngle, float ballDist);
         float moveSpeed = -1.0f;
 };
